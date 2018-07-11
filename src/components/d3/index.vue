@@ -44,7 +44,7 @@ export default {
     }
     var repelForce = d3
       .forceManyBody()
-      .strength(-1300)
+      .strength(-1500)
       .distanceMax(800) 
        .distanceMin(0);
     var simulation = d3
@@ -191,7 +191,7 @@ export default {
     restart(data);
     var Num = 0;
     setTimeout(x => {
-      for (let index = 0; index < 2000; index++) {
+      for (let index = 0; index < 1000; index++) {
         var radom = parseInt(Math.random() * data.nodes.length) - 1;
         data.nodes.push({
           id: index + "nodes" + Num,
