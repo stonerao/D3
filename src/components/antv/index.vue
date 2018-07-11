@@ -1,9 +1,9 @@
 <template>
   <div id="antv">
     <div class="antv-left antv-box">
-      <div align='center' id="d3_selectable_force_directed_graph" style="width: 960px; height: 500px; margin: auto; margin-bottom: 12px">
-    <svg />
-</div>
+      <div align='center' id="grap" style="width: 1600px; height: 900px; margin: auto; margin-bottom: 12px">
+        <svg />
+      </div>
     </div>
     <div class="antv-right antv-box">
 
@@ -12,60 +12,55 @@
 </template>
 
 <script>
-import * as d3 from "d3"; 
+import * as d3 from "d3";
 import { graph } from "./index";
 export default {
   data() {
     return {
-      height: 500,
-      width: 500
+      height: 1600,
+      width: 900
     };
   },
   methods: {
     async getJSON() {}
   },
   mounted() {
-      var svg = d3.select('#d3_selectable_force_directed_graph');
+    //选择svg画布
+    var svg = d3.select("#grap");
     function createV4SelectableForceDirectedGraph(svg, graph) {
-      // if both d3v3 and d3v4 are loaded, we'll assume
-      // that d3v4 is called d3v4, otherwise we'll assume
-      // that d3v4 is the default (d3)
-       var d3v4 = d3;
-
-      var width = +svg.attr("width"),
-        height = +svg.attr("height");
-
-      let parentWidth = d3v4.select("svg").node().parentNode.clientWidth;
-      let parentHeight = d3v4.select("svg").node().parentNode.clientHeight;
-
-      var svg = d3v4
+      //定义SVG的宽高
+      let parentWidth = 1600;
+      let parentHeight = 900;
+      //SVG渲染
+      var svg = d3
         .select("svg")
         .attr("width", parentWidth)
         .attr("height", parentHeight);
 
       // remove any previous graphs
+      // 删除以前所有的G
       svg.selectAll(".g-main").remove();
 
       var gMain = svg.append("g").classed("g-main", true);
-
+      //添加子画布 为全屏
       var rect = gMain
         .append("rect")
         .attr("width", parentWidth)
         .attr("height", parentHeight)
         .style("fill", "white");
-
+      //节点和连线的g Dom
       var gDraw = gMain.append("g");
-
-      var zoom = d3v4.zoom().on("zoom", zoomed);
-
+      //注册平移和缩放
+      var zoom = d3.zoom().on("zoom", zoomed);
       gMain.call(zoom);
 
       function zoomed() {
-        gDraw.attr("transform", d3v4.event.transform);
+        //给当前添加transform属性 
+        gDraw.attr("transform", d3.event.transform);
       }
-
-      var color = d3v4.scaleOrdinal(d3v4.schemeCategory20);
-
+      //创建一个序数比例尺。 用于颜色
+      var color = d3.scaleOrdinal(d3.schemeCategory20);
+      //如果当前数据中没有了线 则返回
       if (!("links" in graph)) {
         console.log("Graph is missing links");
         return;
@@ -77,12 +72,12 @@ export default {
         nodes[graph.nodes[i].id] = graph.nodes[i];
         graph.nodes[i].weight = 1.01;
       }
-
       // the brush needs to go before the nodes so that it doesn't
       // get called when the mouse is over a node
       var gBrushHolder = gDraw.append("g");
       var gBrush = null;
-
+      //新建一个节点
+      //把所有线条注册进去
       var link = gDraw
         .append("g")
         .attr("class", "link")
@@ -93,7 +88,8 @@ export default {
         .attr("stroke-width", function(d) {
           return Math.sqrt(d.value);
         });
-
+      //新建一个节点
+      //把所有节点注册进去
       var node = gDraw
         .append("g")
         .attr("class", "node")
@@ -101,13 +97,39 @@ export default {
         .data(graph.nodes)
         .enter()
         .append("circle")
-        .attr("r", 5)
+        .attr("r", function(e) {
+          //注册节点的大小
+          return 20;
+        })
         .attr("fill", function(d) {
+          //根据当前值生成颜色
           if ("color" in d) return d.color;
           else return color(d.group);
         })
+        .on("click", function(data) {
+          console.log(d3.selectAll(data));
+        })
         .call(
-          d3v4
+          d3
+            .drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended)
+        );
+
+      var text = gDraw
+        .append("g")
+        .attr("class", "text1")
+        .selectAll("text")
+        .data(graph.nodes)
+        .enter()
+        .append("text")
+        .text(function(d) {
+          return d.id;
+        })
+        .attr("fill", "red")
+        .call(
+          d3
             .drag()
             .on("start", dragstarted)
             .on("drag", dragged)
@@ -115,40 +137,51 @@ export default {
         );
 
       // add titles for mouseover blurbs
+      // 给添加移入显示信息
       node.append("title").text(function(d) {
         if ("name" in d) return d.name;
         else return d.id;
       });
-
-      var simulation = d3v4
+      var attractForce = d3
+        .forceManyBody()
+        .strength(20)
+        .distanceMax(140)
+        .distanceMin(60);
+      var repelForce = d3
+        .forceManyBody()
+        .strength(-80)
+        .distanceMax(5000)
+        .distanceMin(0);
+      var simulation = d3
         .forceSimulation()
+        // .forceManyBody()
         .force(
+          // 设置力导图线条的ID 长度
           "link",
-          d3v4
-            .forceLink()
+          d3
+            .forceLink(5000)
             .id(function(d) {
               return d.id;
             })
             .distance(function(d) {
-              return 30;
+              //线条的长度
+              return 80;
               //var dist = 20 / d.value;
               //console.log('dist:', dist);
-
-              return dist;
             })
         )
-        .force("charge", d3v4.forceManyBody())
-        .force("center", d3v4.forceCenter(parentWidth / 2, parentHeight / 2))
-        .force("x", d3v4.forceX(parentWidth / 2))
-        .force("y", d3v4.forceY(parentHeight / 2));
-
+        .force("manyBody", repelForce)
+        .force("charge", d3.forceManyBody()) //创建多体力
+        .force("center", d3.forceCenter(parentWidth / 2, parentHeight / 2)) //图的整体位置
+        .force("x", d3.forceX(parentWidth / 2))
+        .force("y", d3.forceY(parentHeight / 2));
+      console.log(graph.nodes);
       simulation.nodes(graph.nodes).on("tick", ticked);
-
       simulation.force("link").links(graph.links);
-
       function ticked() {
         // update node and line positions at every step of
         // the force simulation
+        //线条 位置
         link
           .attr("x1", function(d) {
             return d.source.x;
@@ -162,7 +195,6 @@ export default {
           .attr("y2", function(d) {
             return d.target.y;
           });
-
         node
           .attr("cx", function(d) {
             return d.x;
@@ -170,12 +202,20 @@ export default {
           .attr("cy", function(d) {
             return d.y;
           });
+        text
+          .attr("x", function(d) {
+            return d.x - d.id.length * 12 / 4;
+          })
+          .attr("y", function(d) {
+            return d.y + (12 - 6) / 2;
+          });
       }
+      // 定时添加节点
 
       var brushMode = false;
       var brushing = false;
 
-      var brush = d3v4
+      var brush = d3
         .brush()
         .on("start", brushstarted)
         .on("brush", brushed)
@@ -191,7 +231,8 @@ export default {
         });
       }
 
-      rect.on("click", () => {
+      rect.on("click", e => {
+        //点击节点外的画布，取消所有选择
         node.each(function(d) {
           d.selected = false;
           d.previouslySelected = false;
@@ -200,11 +241,9 @@ export default {
       });
 
       function brushed() {
-        if (!d3v4.event.sourceEvent) return;
-        if (!d3v4.event.selection) return;
-
-        var extent = d3v4.event.selection;
-
+        if (!d3.event.sourceEvent) return;
+        if (!d3.event.selection) return;
+        var extent = d3.event.selection;
         node.classed("selected", function(d) {
           return (d.selected =
             d.previouslySelected ^
@@ -216,8 +255,8 @@ export default {
       }
 
       function brushended() {
-        if (!d3v4.event.sourceEvent) return;
-        if (!d3v4.event.selection) return;
+        if (!d3.event.sourceEvent) return;
+        if (!d3.event.selection) return;
         if (!gBrush) return;
 
         gBrush.call(brush.move, null);
@@ -231,14 +270,13 @@ export default {
         brushing = false;
       }
 
-      d3v4.select("body").on("keydown", keydown);
-      d3v4.select("body").on("keyup", keyup);
+      d3.select("body").on("keydown", keydown);
+      d3.select("body").on("keyup", keyup);
 
       var shiftKey;
 
       function keydown() {
-        shiftKey = d3v4.event.shiftKey;
-
+        shiftKey = d3.event.shiftKey;
         if (shiftKey) {
           // if we already have a brush, don't do anything
           if (gBrush) return;
@@ -267,7 +305,7 @@ export default {
       }
 
       function dragstarted(d) {
-        if (!d3v4.event.active) simulation.alphaTarget(0.9).restart();
+        if (!d3.event.active) simulation.alphaTarget(0.9).restart();
 
         if (!d.selected && !shiftKey) {
           // if this node isn't selected, then we have to unselect every other node
@@ -276,7 +314,7 @@ export default {
           });
         }
 
-        d3v4.select(this).classed("selected", function(p) {
+        d3.select(this).classed("selected", function(p) {
           d.previouslySelected = d.selected;
           return (d.selected = true);
         });
@@ -286,27 +324,26 @@ export default {
             return d.selected;
           })
           .each(function(d) {
-            //d.fixed |= 2;
             d.fx = d.x;
             d.fy = d.y;
           });
       }
 
       function dragged(d) {
-        //d.fx = d3v4.event.x;
-        //d.fy = d3v4.event.y;
+        //d.fx = d3.event.x;
+        //d.fy = d3.event.y;
         node
           .filter(function(d) {
             return d.selected;
           })
           .each(function(d) {
-            d.fx += d3v4.event.dx;
-            d.fy += d3v4.event.dy;
+            d.fx += d3.event.dx;
+            d.fy += d3.event.dy;
           });
       }
 
       function dragended(d) {
-        if (!d3v4.event.active) simulation.alphaTarget(0);
+        if (!d3.event.active) simulation.alphaTarget(0);
         d.fx = null;
         d.fy = null;
         node
@@ -320,27 +357,56 @@ export default {
           });
       }
 
-      var texts = [
-        "Use the scroll wheel to zoom",
-        "Hold the shift key to select nodes"
-      ];
+      var texts = [];
 
-      svg
-        .selectAll("text")
-        .data(texts)
-        .enter()
-        .append("text")
-        .attr("x", 900)
-        .attr("y", function(d, i) {
-          return 470 + i * 18;
-        })
-        .text(function(d) {
-          return d;
-        });
+      // svg
+      //   .selectAll("text")
+      //   .data(texts)
+      //   .enter()
+      //   .append("text")
+      //   .attr("x", 900)
+      //   .attr("y", function(d, i) {
+      //     return 470 + i * 18;
+      //   })
+      //   .text(function(d) {
+      //     return d;
+      //   });
 
       return graph;
     }
-     createV4SelectableForceDirectedGraph(svg, graph);
+    var num = 0;
+    function add() {
+      var name = graph.nodes[num].id;
+      num++;
+      for (let i = 0; i < 10; i++) {
+        graph.nodes.push({ id: name + i, group: parseInt(Math.random() * 5) });
+        graph.links.push({ source: name, target: name + i, value: 1 });
+      }
+    }
+    var num1 = 0;
+    function addArr() {
+      var name = graph.nodes[num1].id;
+      var nodesArr = [];
+      var linksArr = [];
+      for (let i = 0; i < 10; i++) {
+        nodesArr.push({ id: name + i, group: parseInt(Math.random() * 5) });
+        linksArr.push({ source: name, target: name + i, value: 1 });
+        num1++;
+      }
+      return {
+        nodes: nodesArr,
+        links: linksArr
+      };
+    }
+
+    // for (var i = 0; i < 0; i++) {
+    //   add();
+    // }
+    /*   setInterval(x=>{ 
+      add();
+    },3000) */
+
+    createV4SelectableForceDirectedGraph(svg, graph);
   }
 };
 </script>
@@ -353,12 +419,12 @@ export default {
 }
 .antv-left {
   left: 0;
-  right: 300px;
+  right: 0;
   background: #fff;
 }
 .antv-right {
   right: 0;
-  width: 300px;
+  width: 0;
   background: #ccc;
 }
 #d3_selectable_force_directed_graph svg {
@@ -378,6 +444,14 @@ export default {
 
 .link {
   stroke: #999;
+}
+.text1 {
+  text {
+    font-size: 12px;
+    width: 100px;
+    text-align: center;
+  }
+  font-size: 12px;
 }
 </style>
 
