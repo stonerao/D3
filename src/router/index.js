@@ -4,6 +4,7 @@ import antv from '@/components/antv/index.vue'
 import echarts from '@/components/echarts/index.vue'
 import echarts1 from '@/components/echarts/demo.vue'
 import d3 from '@/components/d3/index.vue'
+import force from '@/components/force/index.vue'
 
 Vue.use(Router)
 
@@ -28,6 +29,10 @@ export default new Router({
       path: '/d3',
       name: 'd3',
       component: d3
+    },{
+      path: '/force',
+      name: 'force',
+      component: force
     }
   ]
 })
