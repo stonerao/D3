@@ -1,6 +1,7 @@
 <template>
   <div>
-    <div id="canvas" style="height:100%;width:100%"></div>
+    <div id="canvas" style="height:200px;width:500px;"></div>
+    <img :src="src" alt="">
   </div>
 </template>
 
@@ -11,7 +12,8 @@ import { datas } from "./data";
 export default {
   data() {
     return {
-      myChart: null
+      myChart: null,
+      src: ""
     };
   },
   mounted() {
@@ -22,7 +24,7 @@ export default {
       let num = JSON_OBJECT.nodes.length;
       let arr = [];
       let links = [];
-      for (let i = 0; i < 300; i++) {
+      for (let i = 0; i < 10; i++) {
         let id = i + num.toString();
         arr.push({
           id: id,
@@ -52,41 +54,67 @@ export default {
       console.log(JSON_OBJECT);
       return datas;
     },
-    load() { 
+    load() {
       let canvas = document.getElementById("canvas");
       var myChart = echarts.init(canvas);
       this.myChart = myChart;
       this.GET_JSON().then(webkitDep => {
-         var option = {
-        legend: {
-            data: ['HTMLElement', 'WebGL', 'SVG', 'CSS', 'Other']
-        },
-        series: [{
-            type: 'graph',
-            layout: 'force',
-            animation: false,
-            label: {
+        var option = {
+          legend: {
+            data: ["HTMLElement", "WebGL", "SVG", "CSS", "Other"]
+          },
+          animation: false,
+          animationThreshold: 0,
+          series: [
+            {
+              type: "graph",
+              layout: "force",
+              animation: false,
+              label: {
                 normal: {
-                    position: 'right',
-                    formatter: '{b}'
+                  position: "right",
+                  formatter: "{b}"
                 }
-            },
-            draggable: true,
-            data: webkitDep.nodes.map(function (node, idx) {
+              },
+              draggable: true,
+              data: webkitDep.nodes.map(function(node, idx) {
                 node.id = idx;
                 return node;
-            }),
-            categories: webkitDep.categories,
-            force: { 
+              }),
+              categories: webkitDep.categories,
+              force: {
                 edgeLength: 5,
                 repulsion: 20,
                 gravity: 0.2
-            },
-            edges: webkitDep.links
-        }]
-    };
+              },
+              edges: webkitDep.links
+            }
+          ]
+        };
 
-    myChart.setOption(option);
+        myChart.setOption({
+          xAxis: {
+            type: "category",
+            data: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+          },
+          yAxis: {
+            type: "value"
+          },
+          series: [
+            {
+              animation: false,
+              data: [820, 932, 901, 934, 1290, 1330, 1320],
+              type: "line",
+              animationDelay: function(idx) {
+                return 0;
+              }
+            }
+          ]
+        });
+
+        setTimeout(x => {
+          this.src = this.myChart.getConnectedDataURL();
+        });
       });
     },
     destroyed() {

@@ -12,13 +12,42 @@ import {
 } from "@/components/d3/data.js";
 export default {
   mounted() {
+    
     let vm = new store({
       el: "#svg",
       zoom:true,
       width:1200,
       height:800,
-      data:data
+      data:data,
+      size:14,
+      label:{
+        show:false
+      }
     }); 
+    vm._restart(data)
+    var Num = 0;
+     setTimeout(x => {
+      for (let index = 0; index < 300; index++) {
+        var radom = parseInt(Math.random() * data.nodes.length) - 1;
+        data.nodes.push({
+          id: index + "nodes" + Num,
+          group: parseInt(Math.random() * 20)
+        });
+        data.links.push({
+          source: data.nodes[radom < 0 ? 0 : radom],
+          target: index + "nodes" + Num,
+          value: 3
+        });
+        data.links.push({
+          source: data.nodes[radom < 0 ? 0 : radom],
+          target: data.nodes[radom < 0 ? 0 : radom],
+          value: 3
+        });
+      }
+       
+       
+     vm._restart(data)
+    }, 3000);
   }
 };
 </script>
@@ -37,5 +66,8 @@ export default {
 .nodes circle {
   stroke: #fff;
   stroke-width: 1.5px;
+}
+.nodes g text{
+  cursor: pointer;
 }
 </style>
