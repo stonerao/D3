@@ -1,175 +1,151 @@
 import * as d3 from "d3";
 
 let color = d3.scaleOrdinal(d3.schemeCategory20);
-
-function func(params) {
-  /**
-   * @param params Object 所有参数集合对象
-   * @param el 选择的svg
-   * @param width svg 宽度
-   * @param height svg 高度
-   * @param zoom Bollean 是否开启平移缩放
-   */  
-  this.gloal = params
-  var gloal = params;
-  let app = document.querySelectorAll(gloal.el)[0];
-  if (!this.gloal.el || !app || app.nodeName != "svg") {
-    console.error("传入节点参数名有误")
-    return
-  }
-  //设置一些默认值
-  //设置节点默认半径 
-
-  //选择svg并且赋予高宽
-  let [width, height] = [gloal.width || 500, gloal.height || 300];
-  var svg = d3.select(gloal.el).attr("width", width).attr("height", height);
-  //添加主体节点
-  var main = svg.append("g").attr("class", "main");
-  if (gloal.zoom) {
-    //注册缩放平移
-    var zoom = d3.zoom().on("zoom", zoomed);
-    svg.call(zoom);
-
-    function zoomed() {
-      //给当前添加transform属性
-      main.attr("transform", d3.event.transform);
+var main
+class render {
+  constructor(gloal) {
+    /**
+     * @param gloal Object 所有参数集合对象
+     * @param el 选择的svg
+     * @param width svg 宽度
+     * @param height svg 高度
+     * @param zoom Bollean 是否开启平移缩放
+     */
+    let app = document.querySelectorAll(gloal.el)[0];
+    if (!gloal.el || !app || app.nodeName != "svg") {
+      console.error("传入节点参数名有误")
+      return
     }
-  }
-  //动力
-  var repelForce = d3
-    .forceManyBody()
-    .strength(-1500)
-    .distanceMax(800)
-    .distanceMin(0);
+    //选择svg并且赋予高宽
+    let [width, height] = [
+      gloal.width || 500,
+      gloal.height || 300
+    ]
+    var svg = d3.select(gloal.el).attr("width", width).attr("height", height);
+    //添加主体节点
+    main = svg.append("g").attr("class", "main");
+    if (gloal.zoom) {
+      //注册缩放平移
+      var zoom = d3.zoom().on("zoom", zoomed);
+      svg.call(zoom);
 
-  var link = main
-    .append("g")
-    .attr("class", "links")
-    .selectAll("line")
-  var node = main
-    .append("g")
-    .attr("class", "nodes")
-    .selectAll("circle");
-  var t = d3
-    .transition()
-    .duration(50)
-    .ease(d3.easeLinear);
-  var simulation = d3
-    .forceSimulation()
-    .force("link", d3.forceLink().id(function (d) {
+      function zoomed() {
+        //给当前添加transform属性
+        main.attr("transform", d3.event.transform);
+      }
+
+    }
+    //动力
+    var repelForce = d3.forceManyBody().strength(-1500).distanceMax(800).distanceMin(0);
+    var simulation = d3.forceSimulation().force("link", d3.forceLink().id(function(d) {
       return d.id;
-    })) 
-    // .force("manyBody", repelForce)
-    .force("center", d3.forceCenter(width / 2, height / 2))
-    .force("charge",d3.forceManyBody().strength(-30))
-    .force("collide",d3.forceCollide(10))
-    .on("tick", ticked);
+    })).force("manyBody", repelForce).force("center", d3.forceCenter(width / 2, height / 2)).on("tick", ticked);
+    var link = main.append("g").attr("class", "links").selectAll("line")
+    var node = main.append("g").attr("class", "nodes").selectAll("circle");
+    var textNodes = main.append("g").attr("class", "text");
 
-  function ticked() {
-    link
-      .attr("x1", function (d) {
+    var t = d3.transition().duration(50).ease(d3.easeLinear);
+    //ticked event
+    function ticked() {
+      link.attr("x1", function(d) {
         return d.source.x;
-      })
-      .attr("y1", function (d) {
+      }).attr("y1", function(d) {
         return d.source.y;
-      })
-      .attr("x2", function (d) {
+      }).attr("x2", function(d) {
         return d.target.x;
-      })
-      .attr("y2", function (d) {
+      }).attr("y2", function(d) {
         return d.target.y;
       });
 
-    node.attr("transform", function (d) {
-      return "translate(" + d.x + "," + d.y + ")";
-    });
-  }
-
-  function dragstarted(d) {
-    if (!d3.event.active) {
-      simulation.alphaTarget(0.2).restart();
+      node.attr("transform", function(d) {
+        return "translate(" + d.x + "," + d.y + ")";
+      });
+      textNodes.attr("x",d=>{
+        return (d.source.x+d.target.x)/2
+      })
+      textNodes.attr("y",d=>{
+        return (d.source.y+d.target.y)/2
+      })
     }
-    d.fx = d.x;
-    d.fy = d.y;
-  }
 
-  function dragged(d) {
-    d.fx = d3.event.x;
-    d.fy = d3.event.y;
-  }
-
-  function dragended(d) {
-    if (!d3.event.active) {
-      simulation.alphaTarget(0);
+    function dragstarted(d) {
+      if (!d3.event.active) {
+        simulation.alphaTarget(0.2).restart();
+      }
+      d.fx = d.x;
+      d.fy = d.y;
     }
-    d.fx = null;
-    d.fy = null;
-  }
-  func.prototype._restart = function (data) {
 
-    // Apply the general update pattern to the nodes.
-    node = node.data(data.nodes, function (d) {
-      return d.id;
-    });
-    node.exit().remove();
-    let allG = node
-      .enter()
-      .append("g")
-      .call(
-        d3
-        .drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended)
-      );
-    let size = 15;
-    var newNode = allG
-      .append("circle")
-      .attr("r", size)
-      .style("opacity", 0)
-      .attr("fill", d => {
+    function dragged(d) {
+      d.fx = d3.event.x;
+      d.fy = d3.event.y;
+    }
+
+    function dragended(d) {
+      if (!d3.event.active) {
+        simulation.alphaTarget(0);
+      }
+      d.fx = null;
+      d.fy = null;
+    }
+    var _this = this;
+    function restart(data) {
+      // Apply the general update pattern to the nodes.
+      node = _this.node().data(data.nodes, function(d) {
+        return d.id;
+      });
+      node.exit().remove();
+      let allG = node.enter().append("g").call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended));
+      let size = 15;
+      var newNode = allG.append("circle").attr("r", size).style("opacity", 0).attr("fill", d => {
         return color(d.group);
       });
 
-    var texts = allG
-      .append("text")
-      .text(function (d) {
+      var texts = allG.append("text").text(function(d) {
         return d.id;
-      })
-      .attr("text-anchor", "middle")
-      .attr("y", `6px`);
-    newNode.transition(t).style("opacity", 1);
-    node = allG.merge(node);
+      }).attr("text-anchor", "middle").attr("y", `6px`);
+      newNode.transition(t).style("opacity", 1);
+      node = allG.merge(node);
 
-    newNode.append("title").text(function (d) {
-      return d.id + " (" + d.group + ")";
-    });
-    // Apply the general update pattern to the links.
-    link = link.data(data.links, function (d) {
-      return d.source.id + "-" + d.target.id;
-    });
-    link.exit().remove();
-    link = link
-      .enter()
-      .append("line")
-      .attr("stroke-width", function (d) {
+      newNode.append("title").text(function(d) {
+        return d.id + " (" + d.group + ")";
+      });
+      // Apply the general update pattern to the links.
+      link = link.data(data.links, function(d) {
+        return d.source.id + "-" + d.target.id;
+      });
+      link.exit().remove();
+      link = link.enter().append("line").attr("stroke-width", function(d) {
         return Math.sqrt(d.value);
-      }).on("click", function (data) {
+      }).on("click", function(data) {
         console.log(data)
-      })
-      .merge(link);
-    simulation.nodes(data.nodes);
-    simulation.force("link").links(data.links).distance(80)
-    // simulation.alpha(0.3).restart();
-    simulation.alphaTarget(0.3).restart();
-    // simulation.tick()
+      }).merge(link);
+
+      textNodes.exit().remove();
+      textNodes = textNodes.selectAll("g").data(data.links).enter().append("g").append("text").text(function(e) {
+        console.log(e.source.id)
+        return e.value+"111111"
+      }).attr("text-anchor", "middle")
+
+      simulation.nodes(data.nodes);
+      simulation.force("link").links(data.links);
+      simulation.alpha(1).restart();
+    }
+    restart(gloal.data)
+    this.restart(gloal.data)
   }
-}
-func.prototype = {
-  _init: function () {
-    console.log(this)
-    return this
+  restart() {}
+  node() {
+    return main.append("g").attr("class", "nodes").selectAll("circle");
+  }
+  link() {
+    return main.append("g").attr("class", "links").selectAll("line")
+  }
+  color(value) {
+    //颜色
+    let color = d3.scaleOrdinal(d3.schemeCategory20);
+    return color(value)
   }
 }
 
-export default func
+export default render
